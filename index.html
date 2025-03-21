@@ -89,22 +89,106 @@
         <div class="group-box">
             <h2>Segmentação</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Etiqueta para Disparo:</label>
-                    <select class="w-full">
-                        <option>Carregar etiquetas...</option>
+                <!-- Tipo de Disparo -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Disparo:</label>
+                    <select id="triggerType" class="w-full" onchange="toggleTriggerOptions()">
+                        <option value="etiquetas">Disparo condicional por etiquetas</option>
+                        <option value="camposPersonalizados">Disparo condicional por campos personalizados</option>
+                        <option value="semConversa">Contatos sem conversa alguma</option>
+                        <option value="semInteracao">Mais tempo sem interação</option>
                     </select>
                 </div>
-                <div class="flex items-end gap-2">
-                    <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
-                        <select id="quantityCombo" class="w-full" onchange="toggleQuantityInput()">
-                            <option>Todos</option>
-                            <option>Quantidade Específica</option>
+
+                <!-- Opções para Disparo por Etiquetas -->
+                <div id="etiquetasOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Etiqueta para Disparo:</label>
+                        <select class="w-full">
+                            <option>Carregar etiquetas...</option>
                         </select>
                     </div>
-                    <div class="flex-1">
-                        <input id="quantityInput" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
+                        <input type="number" placeholder="Ex: 30" class="w-full">
+                    </div>
+                    <div class="flex items-end gap-2 md:col-span-2">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
+                            <select id="quantityCombo" class="w-full" onchange="toggleQuantityInput()">
+                                <option>Todos</option>
+                                <option>Quantidade Específica</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input id="quantityInput" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opções para Disparo por Campos Personalizados -->
+                <div id="camposPersonalizadosOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Campo Personalizado:</label>
+                        <select class="w-full">
+                            <option>Carregar campos personalizados...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor do Campo:</label>
+                        <input type="text" placeholder="Digite o valor do campo" class="w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
+                        <input type="number" placeholder="Ex: 30" class="w-full">
+                    </div>
+                    <div class="flex items-end gap-2 md:col-span-2">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
+                            <select id="quantityComboCampos" class="w-full" onchange="toggleQuantityInputCampos()">
+                                <option>Todos</option>
+                                <option>Quantidade Específica</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input id="quantityInputCampos" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opções para Contatos sem Conversa Alguma -->
+                <div id="semConversaOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <div class="flex items-end gap-2 md:col-span-2">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
+                            <select id="quantityComboSemConversa" class="w-full" onchange="toggleQuantityInputSemConversa()">
+                                <option>Todos</option>
+                                <option>Quantidade Específica</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input id="quantityInputSemConversa" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opções para Mais Tempo sem Interação -->
+                <div id="semInteracaoOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
+                        <input type="number" placeholder="Ex: 30" class="w-full">
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
+                            <select id="quantityComboSemInteracao" class="w-full" onchange="toggleQuantityInputSemInteracao()">
+                                <option>Todos</option>
+                                <option>Quantidade Específica</option>
+                            </select>
+                        </div>
+                        <div class="flex-1">
+                            <input id="quantityInputSemInteracao" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
+                        </div>
                     </div>
                 </div>
             </div>
