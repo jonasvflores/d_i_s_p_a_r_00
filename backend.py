@@ -41,7 +41,7 @@ def index():
 
 @app.route("/api/accounts")
 def get_accounts():
-    return jsonify([{"id": 37, "name": "Archanjo.Co"}])
+    return jsonify([{"id": 1, "name": "Archanjo.Co"}])
 
 @app.route("/api/inboxes/<int:account_id>")
 def get_inboxes(account_id):
