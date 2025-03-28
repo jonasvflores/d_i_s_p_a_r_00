@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 import requests
 import pandas as pd
 from werkzeug.utils import secure_filename
@@ -38,14 +38,6 @@ def allowed_file(filename):
 @app.route("/")
 def index():
     return render_template("index.html")
-
-@app.route("/api/accounts")
-def get_accounts():
-    r = requests.get(f"{CHATWOOT_URL}/accounts", headers=headers)
-    if r.status_code == 200:
-        data = r.json()
-        return jsonify([{"id": acc["id"], "name": acc["name"]} for acc in data])
-    return jsonify([]), 500
 
 @app.route("/api/inboxes/<int:account_id>")
 def get_inboxes(account_id):
@@ -110,14 +102,6 @@ def start_campaign():
             r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?labels={label}", headers=headers)
             if r.status_code == 200:
                 contacts = r.json().get("data", [])
-        elif trigger == "no_conversations":
-            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?sort=-created_at", headers=headers)
-            if r.status_code == 200:
-                contacts = [c for c in r.json().get("data", []) if c.get("conversations_count", 0) == 0]
-        elif trigger == "no_interaction":
-            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?sort=last_activity_at", headers=headers)
-            if r.status_code == 200:
-                contacts = r.json().get("data", [])[::-1]
 
     total = len(contacts) if quantity == "Todos" else min(int(quantity), len(contacts))
     enviados = 0
