@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Configurações
 CHATWOOT_URL = "https://app.bee360.com.br/api/v1"
-API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"  # Verifique se esse token tem acesso à conta 37
+API_TOKEN = "ubZ2Wo7pau1Nb1DGtqkYmgHN"  # Verifique se esse token tem acesso à conta 37
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -41,7 +41,7 @@ def index():
 
 @app.route("/api/accounts")
 def get_accounts():
-    return jsonify([{"id": 1, "name": "Archanjo.Co"}])
+    return jsonify([{"id": 37, "name": "Archanjo.Co"}])
 
 @app.route("/api/inboxes/<int:account_id>")
 def get_inboxes(account_id):
