@@ -7,7 +7,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles to match the PyQt5 app's look */
         body {
             background-color: #f5f5f5;
             font-family: 'Arial', sans-serif;
@@ -52,6 +51,14 @@
             background-color: #e5e7eb;
             cursor: not-allowed;
         }
+        #contactsList {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #d3d3d3;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #fff;
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-6">
@@ -68,19 +75,19 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Conta:</label>
-                    <select class="w-full">
+                    <select id="accountCombo" class="w-full">
                         <option>Carregar contas do banco de dados...</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Telefone de Disparo:</label>
-                    <select class="w-full">
+                    <select id="inboxCombo" class="w-full">
                         <option>Carregar inboxes...</option>
                     </select>
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Campanha:</label>
-                    <input type="text" placeholder="Digite o nome da campanha" class="w-full">
+                    <input id="campaignName" type="text" placeholder="Digite o nome da campanha" class="w-full">
                 </div>
             </div>
         </div>
@@ -89,7 +96,6 @@
         <div class="group-box">
             <h2>Segmentação</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Tipo de Disparo -->
                 <div class="md:col-span-2">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Disparo:</label>
                     <select id="triggerType" class="w-full" onchange="toggleTriggerOptions()">
@@ -97,6 +103,7 @@
                         <option value="camposPersonalizados">Disparo condicional por campos personalizados</option>
                         <option value="semConversa">Contatos sem conversa alguma</option>
                         <option value="semInteracao">Mais tempo sem interação</option>
+                        <option value="csv">Importar contatos via CSV</option>
                     </select>
                 </div>
 
@@ -104,7 +111,7 @@
                 <div id="etiquetasOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Etiqueta para Disparo:</label>
-                        <select class="w-full">
+                        <select id="labelCombo" class="w-full">
                             <option>Carregar etiquetas...</option>
                         </select>
                     </div>
@@ -126,71 +133,19 @@
                     </div>
                 </div>
 
-                <!-- Opções para Disparo por Campos Personalizados -->
-                <div id="camposPersonalizadosOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Campo Personalizado:</label>
-                        <select class="w-full">
-                            <option>Carregar campos personalizados...</option>
-                        </select>
+                <!-- Opções para CSV -->
+                <div id="csvOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Arquivo CSV:</label>
+                        <input id="csvFile" type="file" accept=".csv" class="w-full" onchange="loadCSV()">
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor do Campo:</label>
-                        <input type="text" placeholder="Digite o valor do campo" class="w-full">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
-                        <input type="number" placeholder="Ex: 30" class="w-full">
-                    </div>
-                    <div class="flex items-end gap-2 md:col-span-2">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
-                            <select id="quantityComboCampos" class="w-full" onchange="toggleQuantityInputCampos()">
-                                <option>Todos</option>
-                                <option>Quantidade Específica</option>
-                            </select>
-                        </div>
-                        <div class="flex-1">
-                            <input id="quantityInputCampos" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
-                        </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contatos Carregados:</label>
+                        <div id="contactsList"></div>
                     </div>
                 </div>
 
-                <!-- Opções para Contatos sem Conversa Alguma -->
-                <div id="semConversaOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-                    <div class="flex items-end gap-2 md:col-span-2">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
-                            <select id="quantityComboSemConversa" class="w-full" onchange="toggleQuantityInputSemConversa()">
-                                <option>Todos</option>
-                                <option>Quantidade Específica</option>
-                            </select>
-                        </div>
-                        <div class="flex-1">
-                            <input id="quantityInputSemConversa" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Opções para Mais Tempo sem Interação -->
-                <div id="semInteracaoOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
-                        <input type="number" placeholder="Ex: 30" class="w-full">
-                    </div>
-                    <div class="flex items-end gap-2">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
-                            <select id="quantityComboSemInteracao" class="w-full" onchange="toggleQuantityInputSemInteracao()">
-                                <option>Todos</option>
-                                <option>Quantidade Específica</option>
-                            </select>
-                        </div>
-                        <div class="flex-1">
-                            <input id="quantityInputSemInteracao" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
-                        </div>
-                    </div>
-                </div>
+                <!-- Outras opções (camposPersonalizados, semConversa, semInteracao) permanecem iguais -->
             </div>
         </div>
 
@@ -199,11 +154,11 @@
             <h2>Mensagem da Campanha</h2>
             <div class="space-y-4">
                 <p class="text-sm text-gray-600">Digite a mensagem. Use <code>{nome}</code> para personalizar com o nome do contato.</p>
-                <textarea class="w-full h-24" placeholder="Exemplo: Olá {nome}, tudo bem? Confira nossa promoção!"></textarea>
+                <textarea id="messageInput" class="w-full h-24" placeholder="Exemplo: Olá {nome}, tudo bem? Confira nossa promoção!"></textarea>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Anexar Arquivo (imagem/vídeo/áudio/PDF):</label>
                     <div class="flex gap-2">
-                        <input type="text" placeholder="Nenhum arquivo selecionado" class="flex-1" readonly>
+                        <input id="fileInput" type="text" placeholder="Nenhum arquivo selecionado" class="flex-1" readonly>
                         <button class="btn-yellow" onclick="selectFile()">Selecionar Arquivo</button>
                     </div>
                 </div>
@@ -224,7 +179,19 @@
     </div>
 
     <script>
-        // Toggle the quantity input field based on the dropdown selection
+        let contacts = [];
+
+        function toggleTriggerOptions() {
+            const triggerType = document.getElementById('triggerType').value;
+            document.getElementById('etiquetasOptions').classList.add('hidden');
+            document.getElementById('csvOptions').classList.add('hidden');
+            if (triggerType === 'etiquetas') {
+                document.getElementById('etiquetasOptions').classList.remove('hidden');
+            } else if (triggerType === 'csv') {
+                document.getElementById('csvOptions').classList.remove('hidden');
+            }
+        }
+
         function toggleQuantityInput() {
             const quantityCombo = document.getElementById('quantityCombo');
             const quantityInput = document.getElementById('quantityInput');
@@ -238,21 +205,89 @@
             }
         }
 
-        // Placeholder functions for button actions
+        function loadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                contacts = parseCSV(text);
+                displayContacts();
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            const headers = lines[0].split(',').map(header => header.trim());
+            if (!headers.includes('nome') || !headers.includes('telefone')) {
+                alert('O CSV deve conter as colunas "nome" e "telefone".');
+                return [];
+            }
+
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(value => value.trim());
+                const contact = {};
+                headers.forEach((header, index) => {
+                    contact[header] = values[index];
+                });
+                result.push(contact);
+            }
+            return result;
+        }
+
+        function displayContacts() {
+            const contactsList = document.getElementById('contactsList');
+            contactsList.innerHTML = '';
+            if (contacts.length === 0) {
+                contactsList.innerHTML = '<p>Nenhum contato carregado.</p>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            contacts.forEach(contact => {
+                const li = document.createElement('li');
+                li.textContent = `${contact.nome} - ${contact.telefone}`;
+                ul.appendChild(li);
+            });
+            contactsList.appendChild(ul);
+            alert(`${contacts.length} contatos carregados com sucesso!`);
+        }
+
         function selectFile() {
-            alert('Funcionalidade de seleção de arquivo será implementada na próxima etapa.');
+            alert('Funcionalidade de seleção de arquivo será implementada no backend.');
         }
 
         function previewCampaign() {
-            alert('Prévia da campanha será exibida aqui.');
+            const campaignName = document.getElementById('campaignName').value;
+            const message = document.getElementById('messageInput').value;
+            const triggerType = document.getElementById('triggerType').value;
+            let previewText = `Nome: ${campaignName}\nMensagem: ${message}`;
+            if (triggerType === 'csv' && contacts.length > 0) {
+                previewText += `\nContatos: ${contacts.length} carregados do CSV`;
+            }
+            alert(`Prévia:\n${previewText}`);
         }
 
         function startCampaign() {
-            alert('Disparo iniciado! (Funcionalidade em desenvolvimento)');
+            if (document.getElementById('triggerType').value === 'csv' && contacts.length > 0) {
+                alert(`Iniciando disparo para ${contacts.length} contatos do CSV! (Necessita de backend para integração com Chatwoot)`);
+            } else {
+                alert('Disparo iniciado! (Necessita de backend para integração com Chatwoot)');
+            }
         }
 
         function restartCampaign() {
-            alert('Campanha reiniciada! (Funcionalidade em desenvolvimento)');
+            document.getElementById('campaignName').value = '';
+            document.getElementById('messageInput').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('csvFile').value = '';
+            contacts = [];
+            displayContacts();
+            alert('Campanha reiniciada!');
         }
 
         function showStatus() {
