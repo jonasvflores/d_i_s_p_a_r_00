@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Configurações
 CHATWOOT_URL = "https://app.bee360.com.br/api/v1"
-API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
+API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"  # Verifique se esse token tem acesso à conta 37
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -46,11 +46,17 @@ def get_accounts():
 @app.route("/api/inboxes/<int:account_id>")
 def get_inboxes(account_id):
     r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/inboxes", headers=headers)
+    if r.status_code != 200:
+        print(f"Erro ao buscar inboxes: {r.status_code} - {r.text}")
+        return jsonify([])
     return jsonify(r.json())
 
 @app.route("/api/labels/<int:account_id>")
 def get_labels(account_id):
     r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/labels", headers=headers)
+    if r.status_code != 200:
+        print(f"Erro ao buscar etiquetas: {r.status_code} - {r.text}")
+        return jsonify([])
     return jsonify(r.json())
 
 @app.route("/api/upload_csv", methods=["POST"])
@@ -101,12 +107,13 @@ def start_campaign():
     trigger = data.get("trigger_type", "etiquetas")
     campaign_name = data.get("campaign_name", "Sem Nome")
 
-    # Estratégias de segmentação
     if not contacts:
         if trigger == "etiquetas" and label:
             r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?labels={label}", headers=headers)
             if r.status_code == 200:
                 contacts = r.json().get("data", [])
+            else:
+                print(f"Erro ao buscar contatos por etiqueta: {r.status_code} - {r.text}")
         elif trigger == "no_conversations":
             r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?sort=-created_at", headers=headers)
             if r.status_code == 200:
@@ -138,7 +145,6 @@ def start_campaign():
         if r.status_code == 200:
             enviados += 1
 
-    # Salvar log no SQLite
     c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total) VALUES (?, ?, ?, ?, ?)",
               (datetime.now().isoformat(), campaign_name, message, enviados, total))
     conn.commit()
