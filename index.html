@@ -1,302 +1,207 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐝 Bee360 - Disparador de Campanhas</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            background-color: #f5f5f5;
-            font-family: 'Arial', sans-serif;
-        }
-        .group-box {
-            border: 2px solid #d3d3d3;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            background-color: #fff;
-        }
-        .group-box h2 {
-            font-weight: bold;
-            font-size: 1.25rem;
-            color: #333;
-            margin-bottom: 15px;
-        }
-        .btn-yellow {
-            background-color: #ffeb3b;
-            color: #333;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 2px solid #d3d3d3;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: background-color 0.3s;
-        }
-        .btn-yellow:hover {
-            background-color: #ffd700;
-        }
-        input, select, textarea {
-            border: 2px solid #d3d3d3;
-            border-radius: 5px;
-            padding: 8px;
-            font-size: 1rem;
-            width: 100%;
-        }
-        textarea {
-            resize: vertical;
-        }
-        .disabled-input {
-            background-color: #e5e7eb;
-            cursor: not-allowed;
-        }
-        #contactsList {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #d3d3d3;
-            border-radius: 5px;
-            padding: 10px;
-            background-color: #fff;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐝 Bee360 - Disparador de Campanhas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .disabled-input { background-color: #e5e7eb; cursor: not-allowed; }
+  </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-6">
-    <div class="w-full max-w-4xl">
-        <!-- Title and Description -->
-        <div class="text-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-800"><img src="https://s3.archanjo.co/chatwoot/PNG%20Bee%20High%20resolution%20%28square%29.png" style="width: 50px; height: auto;" alt="Bee360 - Disparador de Campanhas">Bee360 - Disparador</h1>
-            <p class="text-sm italic text-gray-600">Configure e dispare campanhas de forma rápida e eficiente!</p>
-        </div>
+<body class="bg-gray-100 min-h-screen p-4">
+<div class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+      <img src="https://s3.archanjo.co/chatwoot/PNG%20Bee%20High%20resolution%20%28square%29.png" class="w-8 h-8"> Bee360 - Disparador
+    </h1>
+    <button id="logoutBtn" class="text-sm text-red-500">Sair</button>
+  </div>
+  <hr class="my-4">
 
-        <!-- Configuração da Campanha -->
-        <div class="group-box">
-            <h2>Configuração da Campanha</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Conta:</label>
-                    <select id="accountCombo" class="w-full">
-                        <option>Carregar contas do banco de dados...</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Telefone de Disparo:</label>
-                    <select id="inboxCombo" class="w-full">
-                        <option>Carregar inboxes...</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome da Campanha:</label>
-                    <input id="campaignName" type="text" placeholder="Digite o nome da campanha" class="w-full">
-                </div>
-            </div>
-        </div>
+  <form id="loginForm" class="mb-4 hidden">
+    <label class="block mb-2">Chave de Acesso:</label>
+    <input id="authToken" class="w-full border p-2 rounded" type="password" required>
+    <button type="submit" class="mt-2 bg-yellow-400 text-black px-4 py-2 rounded">Entrar</button>
+  </form>
 
-        <!-- Segmentação -->
-        <div class="group-box">
-            <h2>Segmentação</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Disparo:</label>
-                    <select id="triggerType" class="w-full" onchange="toggleTriggerOptions()">
-                        <option value="etiquetas">Disparo condicional por etiquetas</option>
-                        <option value="camposPersonalizados">Disparo condicional por campos personalizados</option>
-                        <option value="semConversa">Contatos sem conversa alguma</option>
-                        <option value="semInteracao">Mais tempo sem interação</option>
-                        <option value="csv">Importar contatos via CSV</option>
-                    </select>
-                </div>
+  <div id="mainApp" class="space-y-6 hidden">
+    <section>
+      <h2 class="text-lg font-semibold">Configuração da Campanha</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+        <select id="accountCombo" class="border p-2 rounded"></select>
+        <select id="inboxCombo" class="border p-2 rounded"></select>
+        <input id="campaignName" type="text" placeholder="Nome da Campanha" class="border p-2 rounded">
+      </div>
+    </section>
 
-                <!-- Opções para Disparo por Etiquetas -->
-                <div id="etiquetasOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Etiqueta para Disparo:</label>
-                        <select id="labelCombo" class="w-full">
-                            <option>Carregar etiquetas...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Intervalo Mínimo desde a Última Interação (em dias):</label>
-                        <input type="number" placeholder="Ex: 30" class="w-full">
-                    </div>
-                    <div class="flex items-end gap-2 md:col-span-2">
-                        <div class="flex-1">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade de Contatos:</label>
-                            <select id="quantityCombo" class="w-full" onchange="toggleQuantityInput()">
-                                <option>Todos</option>
-                                <option>Quantidade Específica</option>
-                            </select>
-                        </div>
-                        <div class="flex-1">
-                            <input id="quantityInput" type="text" placeholder="Digite a quantidade" class="w-full disabled-input" disabled>
-                        </div>
-                    </div>
-                </div>
+    <section>
+      <h2 class="text-lg font-semibold">Segmentação</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+        <select id="triggerType" class="border p-2 rounded">
+          <option value="etiquetas">Disparo por Etiqueta</option>
+          <option value="csv">Importar via CSV</option>
+          <option value="custom_fields">Disparo por Campos Personalizados</option>
+          <option value="no_conversations">Contatos Sem Conversa</option>
+          <option value="no_interaction">Mais Tempo Sem Interação</option>
+        </select>
+        <input id="quantity" type="number" placeholder="Qtd. de contatos" class="border p-2 rounded">
+        <select id="labelCombo" class="border p-2 rounded"></select>
+        <input id="csvFile" type="file" class="border p-2 rounded" accept=".csv">
+        <input id="scheduledTime" type="datetime-local" class="border p-2 rounded">
+      </div>
+    </section>
 
-                <!-- Opções para CSV -->
-                <div id="csvOptions" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Arquivo CSV:</label>
-                        <input id="csvFile" type="file" accept=".csv" class="w-full" onchange="loadCSV()">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contatos Carregados:</label>
-                        <div id="contactsList"></div>
-                    </div>
-                </div>
+    <section>
+      <h2 class="text-lg font-semibold">Mensagem</h2>
+      <textarea id="messageInput" rows="4" placeholder="Olá {nome}, tudo bem?" class="w-full border p-2 rounded"></textarea>
+      <input id="fileInput" type="file" class="mt-2 border p-2 rounded">
+    </section>
 
-                <!-- Outras opções (camposPersonalizados, semConversa, semInteracao) permanecem iguais -->
-            </div>
-        </div>
+    <section class="text-center flex flex-wrap gap-2 justify-center">
+      <button onclick="previewCampaign()" class="bg-blue-200 hover:bg-blue-100 text-black font-semibold px-4 py-2 rounded">Prévia da Campanha</button>
+      <button onclick="startCampaign()" class="bg-yellow-400 hover:bg-yellow-300 text-black font-semibold px-4 py-2 rounded">Iniciar Disparo</button>
+      <button onclick="repeatCampaign()" class="bg-purple-300 hover:bg-purple-200 text-black font-semibold px-4 py-2 rounded">Repetir Última Campanha</button>
+      <button onclick="clearCampaign()" class="bg-red-300 hover:bg-red-200 text-black font-semibold px-4 py-2 rounded">Limpar Tudo</button>
+    </section>
 
-        <!-- Mensagem da Campanha -->
-        <div class="group-box">
-            <h2>Mensagem da Campanha</h2>
-            <div class="space-y-4">
-                <p class="text-sm text-gray-600">Digite a mensagem. Use <code>{nome}</code> para personalizar com o nome do contato.</p>
-                <textarea id="messageInput" class="w-full h-24" placeholder="Exemplo: Olá {nome}, tudo bem? Confira nossa promoção!"></textarea>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Anexar Arquivo (imagem/vídeo/áudio/PDF):</label>
-                    <div class="flex gap-2">
-                        <input id="fileInput" type="text" placeholder="Nenhum arquivo selecionado" class="flex-1" readonly>
-                        <button class="btn-yellow" onclick="selectFile()">Selecionar Arquivo</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <p id="statusMsg" class="text-center text-sm text-gray-500 mt-2"></p>
 
-        <!-- Action Buttons -->
-        <div class="flex flex-wrap justify-center gap-4">
-            <button class="btn-yellow" onclick="previewCampaign()">Visualizar Campanha</button>
-            <button class="btn-yellow" onclick="startCampaign()">Iniciar Disparo</button>
-            <button class="btn-yellow" onclick="restartCampaign()">Reiniciar Campanha</button>
-            <button class="btn-yellow" onclick="showStatus()">Status</button>
-            <button class="btn-yellow" onclick="cancelCampaign()">Cancelar</button>
-        </div>
+    <section>
+      <h2 class="text-lg font-semibold">Logs e Relatórios</h2>
+      <div id="logContainer" class="bg-gray-50 border rounded p-4 h-40 overflow-y-auto text-sm text-gray-700"></div>
+    </section>
+  </div>
+</div>
 
-        <!-- Copyright -->
-        <p class="text-center text-xs italic text-gray-500 mt-6">© 2025 Bee360 - Desenvolvido por Jonas Flores (@jonasvflores)</p>
-    </div>
+<script>
+const authKey = "Bee360Secret123";
+let contacts = [], attachmentId = null, lastPayload = null;
 
-    <script>
-        let contacts = [];
+window.onload = () => {
+  document.getElementById('loginForm').classList.remove("hidden");
+  document.getElementById("loginForm").onsubmit = e => {
+    e.preventDefault();
+    const token = document.getElementById("authToken").value;
+    if (token === authKey) {
+      document.getElementById('loginForm').classList.add("hidden");
+      document.getElementById('mainApp').classList.remove("hidden");
+      loadInitialData();
+    } else {
+      alert("Chave de acesso incorreta!");
+    }
+  };
+  document.getElementById("logoutBtn").onclick = () => location.reload();
+}
 
-        function toggleTriggerOptions() {
-            const triggerType = document.getElementById('triggerType').value;
-            document.getElementById('etiquetasOptions').classList.add('hidden');
-            document.getElementById('csvOptions').classList.add('hidden');
-            if (triggerType === 'etiquetas') {
-                document.getElementById('etiquetasOptions').classList.remove('hidden');
-            } else if (triggerType === 'csv') {
-                document.getElementById('csvOptions').classList.remove('hidden');
-            }
-        }
+function loadInitialData() {
+  fetch("/api/accounts").then(r => r.json()).then(data => {
+    const combo = document.getElementById("accountCombo");
+    combo.innerHTML = data.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join("");
+    loadInboxes(); loadLabels();
+  });
+}
 
-        function toggleQuantityInput() {
-            const quantityCombo = document.getElementById('quantityCombo');
-            const quantityInput = document.getElementById('quantityInput');
-            if (quantityCombo.value === 'Quantidade Específica') {
-                quantityInput.disabled = false;
-                quantityInput.classList.remove('disabled-input');
-            } else {
-                quantityInput.disabled = true;
-                quantityInput.classList.add('disabled-input');
-                quantityInput.value = '';
-            }
-        }
+function loadInboxes() {
+  const id = document.getElementById("accountCombo").value;
+  fetch(`/api/inboxes/${id}`).then(r => r.json()).then(data => {
+    const combo = document.getElementById("inboxCombo");
+    combo.innerHTML = data.map(i => `<option value="${i.id}">${i.name}</option>`).join("");
+  });
+}
 
-        function loadCSV() {
-            const fileInput = document.getElementById('csvFile');
-            const file = fileInput.files[0];
-            if (!file) return;
+function loadLabels() {
+  const id = document.getElementById("accountCombo").value;
+  fetch(`/api/labels/${id}`).then(r => r.json()).then(data => {
+    const combo = document.getElementById("labelCombo");
+    combo.innerHTML = data.map(i => `<option value="${i.title}">${i.title}</option>`).join("");
+  });
+}
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                contacts = parseCSV(text);
-                displayContacts();
-            };
-            reader.readAsText(file);
-        }
+function previewCampaign() {
+  const name = document.getElementById("campaignName").value;
+  const trigger = document.getElementById("triggerType").value;
+  const label = document.getElementById("labelCombo").value;
+  const qtd = document.getElementById("quantity").value;
+  const msg = document.getElementById("messageInput").value;
+  alert(`Campanha: ${name}\nTipo: ${trigger}\nEtiqueta: ${label}\nQtd: ${qtd || 'Todos'}\nMensagem: ${msg}`);
+}
 
-        function parseCSV(text) {
-            const lines = text.split('\n').filter(line => line.trim() !== '');
-            const headers = lines[0].split(',').map(header => header.trim());
-            if (!headers.includes('nome') || !headers.includes('telefone')) {
-                alert('O CSV deve conter as colunas "nome" e "telefone".');
-                return [];
-            }
+async function startCampaign() {
+  const statusMsg = document.getElementById("statusMsg");
+  statusMsg.textContent = "Processando...";
+  const accountId = document.getElementById("accountCombo").value;
+  const inboxId = document.getElementById("inboxCombo").value;
+  const label = document.getElementById("labelCombo").value;
+  const message = document.getElementById("messageInput").value;
+  const quantity = document.getElementById("quantity").value || "Todos";
+  const trigger = document.getElementById("triggerType").value;
+  const time = document.getElementById("scheduledTime").value;
+  const file = document.getElementById("fileInput").files[0];
 
-            const result = [];
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(value => value.trim());
-                const contact = {};
-                headers.forEach((header, index) => {
-                    contact[header] = values[index];
-                });
-                result.push(contact);
-            }
-            return result;
-        }
+  let attachment_id = null;
+  if (file) {
+    const fd = new FormData(); fd.append("attachment", file); fd.append("account_id", accountId);
+    const res = await fetch("/api/upload_attachment", { method: "POST", body: fd });
+    const json = await res.json(); if (json.attachment_id) attachment_id = json.attachment_id;
+  }
 
-        function displayContacts() {
-            const contactsList = document.getElementById('contactsList');
-            contactsList.innerHTML = '';
-            if (contacts.length === 0) {
-                contactsList.innerHTML = '<p>Nenhum contato carregado.</p>';
-                return;
-            }
+  let payload = {
+    account_id: accountId,
+    inbox_id: inboxId,
+    message,
+    quantity,
+    attachment_id,
+    label
+  };
 
-            const ul = document.createElement('ul');
-            contacts.forEach(contact => {
-                const li = document.createElement('li');
-                li.textContent = `${contact.nome} - ${contact.telefone}`;
-                ul.appendChild(li);
-            });
-            contactsList.appendChild(ul);
-            alert(`${contacts.length} contatos carregados com sucesso!`);
-        }
+  if (trigger === "csv") {
+    const csv = document.getElementById("csvFile").files[0];
+    if (!csv) return alert("Selecione um CSV");
+    const fd = new FormData(); fd.append("csvFile", csv);
+    const res = await fetch("/api/upload_csv", { method: "POST", body: fd });
+    const json = await res.json();
+    if (json.contacts) payload.contacts = json.contacts;
+  }
 
-        function selectFile() {
-            alert('Funcionalidade de seleção de arquivo será implementada no backend.');
-        }
+  lastPayload = payload;
 
-        function previewCampaign() {
-            const campaignName = document.getElementById('campaignName').value;
-            const message = document.getElementById('messageInput').value;
-            const triggerType = document.getElementById('triggerType').value;
-            let previewText = `Nome: ${campaignName}\nMensagem: ${message}`;
-            if (triggerType === 'csv' && contacts.length > 0) {
-                previewText += `\nContatos: ${contacts.length} carregados do CSV`;
-            }
-            alert(`Prévia:\n${previewText}`);
-        }
+  if (time) {
+    statusMsg.textContent = `Campanha agendada para ${new Date(time).toLocaleString()}`;
+    return setTimeout(() => sendNow(payload), new Date(time) - new Date());
+  }
 
-        function startCampaign() {
-            if (document.getElementById('triggerType').value === 'csv' && contacts.length > 0) {
-                alert(`Iniciando disparo para ${contacts.length} contatos do CSV! (Necessita de backend para integração com Chatwoot)`);
-            } else {
-                alert('Disparo iniciado! (Necessita de backend para integração com Chatwoot)');
-            }
-        }
+  sendNow(payload);
+}
 
-        function restartCampaign() {
-            document.getElementById('campaignName').value = '';
-            document.getElementById('messageInput').value = '';
-            document.getElementById('fileInput').value = '';
-            document.getElementById('csvFile').value = '';
-            contacts = [];
-            displayContacts();
-            alert('Campanha reiniciada!');
-        }
+function sendNow(payload) {
+  fetch("/api/start_campaign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById("statusMsg").textContent = data.message;
+    document.getElementById("logContainer").innerHTML += `<div>${new Date().toLocaleString()} - ${data.message}</div>`;
+  });
+}
 
-        function showStatus() {
-            alert('Status da campanha será exibido aqui.');
-        }
+function clearCampaign() {
+  document.getElementById("messageInput").value = "";
+  document.getElementById("fileInput").value = "";
+  document.getElementById("csvFile").value = "";
+  document.getElementById("campaignName").value = "";
+  document.getElementById("scheduledTime").value = "";
+  document.getElementById("quantity").value = "";
+  document.getElementById("statusMsg").textContent = "";
+  contacts = []; attachmentId = null; lastPayload = null;
+}
 
-        function cancelCampaign() {
-            alert('Configuração da campanha cancelada.');
-        }
-    </script>
+function repeatCampaign() {
+  if (!lastPayload) return alert("Nenhuma campanha anterior encontrada.");
+  sendNow(lastPayload);
+}
+</script>
 </body>
 </html>
