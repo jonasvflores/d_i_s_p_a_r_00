@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # Configurações
 CHATWOOT_URL = "https://app.bee360.com.br/api/v1"
-API_TOKEN = "ubZ2Wo7pau1Nb1DGtqkYmgHN"  # Verifique se esse token tem acesso à conta 37
+API_TOKEN = "qeTqgXGubNMvLZQUgwUWLLU4"  # Verifique se esse token tem acesso à conta 37
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
