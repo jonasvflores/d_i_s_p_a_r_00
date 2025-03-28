@@ -3,19 +3,34 @@ from flask import Flask, render_template, request, jsonify
 import requests
 import pandas as pd
 from werkzeug.utils import secure_filename
+from datetime import datetime
+import sqlite3
 
 app = Flask(__name__)
 
 # Configurações
 CHATWOOT_URL = "https://app.bee360.com.br/api/v1"
-API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"  # Substitua pelo seu token
+API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"csv", "png", "jpg", "jpeg", "mp4", "mp3", "pdf"}
 
-# Cabeçalhos corretos para token pessoal de agente
 headers = {"api_access_token": API_TOKEN}
+
+# Banco de dados para histórico
+DB_PATH = "bee360_logs.db"
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT,
+    campaign TEXT,
+    message TEXT,
+    sent INTEGER,
+    total INTEGER
+)''')
+conn.commit()
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -26,7 +41,6 @@ def index():
 
 @app.route("/api/accounts")
 def get_accounts():
-    # Simulando conta fixa, pois token de agente não acessa todas as contas
     return jsonify([{"id": 37, "name": "Archanjo.Co"}])
 
 @app.route("/api/inboxes/<int:account_id>")
@@ -84,14 +98,23 @@ def start_campaign():
     contacts = data.get("contacts", [])
     quantity = data.get("quantity")
     attachment_id = data.get("attachment_id")
+    trigger = data.get("trigger_type", "etiquetas")
+    campaign_name = data.get("campaign_name", "Sem Nome")
 
-    # Busca contatos se for por etiqueta e não foram enviados via CSV
-    if not contacts and label:
-        r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?labels={label}", headers=headers)
-        if r.status_code == 200:
-            contacts = r.json()["data"]
-        else:
-            return jsonify({"error": "Erro ao buscar contatos por etiqueta"}), 500
+    # Estratégias de segmentação
+    if not contacts:
+        if trigger == "etiquetas" and label:
+            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?labels={label}", headers=headers)
+            if r.status_code == 200:
+                contacts = r.json().get("data", [])
+        elif trigger == "no_conversations":
+            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?sort=-created_at", headers=headers)
+            if r.status_code == 200:
+                contacts = [c for c in r.json().get("data", []) if c.get("conversations_count", 0) == 0]
+        elif trigger == "no_interaction":
+            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?sort=last_activity_at", headers=headers)
+            if r.status_code == 200:
+                contacts = r.json().get("data", [])[::-1]
 
     total = len(contacts) if quantity == "Todos" else min(int(quantity), len(contacts))
     enviados = 0
@@ -115,7 +138,21 @@ def start_campaign():
         if r.status_code == 200:
             enviados += 1
 
+    # Salvar log no SQLite
+    c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total) VALUES (?, ?, ?, ?, ?)",
+              (datetime.now().isoformat(), campaign_name, message, enviados, total))
+    conn.commit()
+
     return jsonify({"message": f"Disparo concluído! {enviados} de {total} mensagens enviadas."})
+
+@app.route("/api/campaigns/history")
+def history():
+    c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 20")
+    rows = c.fetchall()
+    return jsonify([{
+        "id": r[0], "timestamp": r[1], "campaign": r[2],
+        "message": r[3], "sent": r[4], "total": r[5]
+    } for r in rows])
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
