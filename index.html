@@ -74,6 +74,14 @@
   </div>
 </div>
 
+
+<div class="mt-6 text-center">
+    <button onclick="verHistorico()" class="bg-gray-200 hover:bg-gray-100 px-4 py-2 rounded">📊 Ver Histórico</button>
+  </div>
+  
+  <div id="historyBox" class="mt-4 overflow-auto text-sm text-left bg-white border rounded p-4 shadow-inner max-h-96"></div>
+  
+
 <script>
 const authKey = "Bee360Secret123";
 let contacts = [], attachmentId = null, lastPayload = null;
@@ -93,6 +101,20 @@ window.onload = () => {
   };
   document.getElementById("logoutBtn").onclick = () => location.reload();
 }
+
+
+
+
+function verHistorico() {
+    fetch('/api/campaigns/history/table')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('historyBox').innerHTML = html;
+      });
+  }
+
+
+
 
 function loadInitialData() {
   fetch("/api/accounts").then(r => r.json()).then(data => {
