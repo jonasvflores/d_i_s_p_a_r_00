@@ -9,9 +9,9 @@ import sqlite3
 app = Flask(__name__)
 
 # Configurações
-CHATWOOT_URL = "https://app.bee360.com.br/api"
-API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
 ACCOUNT_ID = 58
+CHATWOOT_URL = f"https://app.bee360.com.br/api"
+API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
