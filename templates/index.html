@@ -72,7 +72,9 @@
   </div>
 
   <script>
-    const ACCOUNT_ID = 58;
+    const urlParts = window.location.href.split("/");
+const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]);
+
 
     window.onload = function () {
       // Buscar nome da conta dinamicamente
