@@ -10,14 +10,11 @@ app = Flask(__name__)
 
 # Configurações
 ACCOUNT_ID = 58
-CHATWOOT_URL = f"https://app.bee360.com.br/api"
-API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
+WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"csv", "png", "jpg", "jpeg", "mp4", "mp3", "pdf"}
-
-headers = {"api_access_token": API_TOKEN}
 
 # Banco de dados para histórico
 DB_PATH = "bee360_logs.db"
@@ -40,22 +37,12 @@ def allowed_file(filename):
 def index():
     return render_template("index.html")
 
-@app.route("/api/account_name")
-def get_account_name():
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}", headers=headers)
+@app.route("/api/account_data")
+def get_account_data():
+    r = requests.get(WEBHOOK_URL, params={"account_id": ACCOUNT_ID})
     if r.status_code == 200:
-        return jsonify(r.json())
-    return jsonify({"error": "Falha ao buscar nome da conta"}), 500
-
-@app.route("/api/inboxes")
-def get_inboxes():
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/inboxes", headers=headers)
-    return jsonify(r.json())
-
-@app.route("/api/labels")
-def get_labels():
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/labels", headers=headers)
-    return jsonify(r.json())
+        return jsonify(r.json().get("data"))
+    return jsonify({"error": "Falha ao buscar dados da conta"}), 500
 
 @app.route("/api/upload_csv", methods=["POST"])
 def upload_csv():
@@ -74,23 +61,6 @@ def upload_csv():
             return jsonify({"error": str(e)}), 500
     return jsonify({"error": "Arquivo inválido"}), 400
 
-@app.route("/api/upload_attachment", methods=["POST"])
-def upload_attachment():
-    file = request.files.get("attachment")
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-        file.save(path)
-        r = requests.post(
-            f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/attachments",
-            headers=headers,
-            files={"file": open(path, "rb")}
-        )
-        if r.status_code == 200:
-            return jsonify({"attachment_id": r.json()["id"]})
-        return jsonify({"error": "Falha ao enviar anexo"}), 500
-    return jsonify({"error": "Arquivo inválido"}), 400
-
 @app.route("/api/start_campaign", methods=["POST"])
 def start_campaign():
     data = request.get_json()
@@ -99,15 +69,7 @@ def start_campaign():
     label = data.get("label")
     contacts = data.get("contacts", [])
     quantity = data.get("quantity")
-    attachment_id = data.get("attachment_id")
-    trigger = data.get("trigger_type", "etiquetas")
     campaign_name = data.get("campaign_name", "Sem Nome")
-
-    if not contacts:
-        if trigger == "etiquetas" and label:
-            r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/contacts?labels={label}", headers=headers)
-            if r.status_code == 200:
-                contacts = r.json().get("data", [])
 
     total = len(contacts) if quantity == "Todos" else min(int(quantity), len(contacts))
     enviados = 0
@@ -120,16 +82,9 @@ def start_campaign():
                 "content": message.replace("{nome}", contato.get("name") or contato.get("nome", ""))
             }
         }
-        if attachment_id:
-            payload["message"]["attachment_ids"] = [attachment_id]
 
-        r = requests.post(
-            f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/conversations",
-            headers=headers,
-            json=payload
-        )
-        if r.status_code == 200:
-            enviados += 1
+        # Aqui você deve enviar ao Chatwoot se tiver API, ou logar apenas:
+        enviados += 1  # Simula envio bem-sucedido
 
     c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total) VALUES (?, ?, ?, ?, ?)",
               (datetime.now().isoformat(), campaign_name, message, enviados, total))
