@@ -39,6 +39,13 @@ def allowed_file(filename):
 def index():
     return render_template("index.html")
 
+@app.route("/api/account_name/<int:account_id>")
+def get_account_name(account_id):
+    r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}", headers=headers)
+    if r.status_code == 200:
+        return jsonify(r.json())
+    return jsonify({"error": "Falha ao buscar nome da conta"}), 500
+
 @app.route("/api/inboxes/<int:account_id>")
 def get_inboxes(account_id):
     r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/inboxes", headers=headers)
