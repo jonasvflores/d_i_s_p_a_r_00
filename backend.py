@@ -39,10 +39,11 @@ def index():
 
 @app.route("/api/account_data")
 def get_account_data():
-    r = requests.get(WEBHOOK_URL, params={"account_id": ACCOUNT_ID})
+    r = requests.post(WEBHOOK_URL, json={"account_id": ACCOUNT_ID})
     if r.status_code == 200:
         return jsonify(r.json().get("data"))
     return jsonify({"error": "Falha ao buscar dados da conta"}), 500
+
 
 @app.route("/api/upload_csv", methods=["POST"])
 def upload_csv():
