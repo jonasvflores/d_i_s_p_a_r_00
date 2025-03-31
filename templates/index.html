@@ -72,12 +72,12 @@
   </div>
 
   <script>
+    // Detectar account_id dinamicamente pela URL (ex: /accounts/58/apps/123)
     const urlParts = window.location.href.split("/");
-const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]);
-
+    const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]) || 0;
 
     window.onload = function () {
-      // Buscar nome da conta dinamicamente
+      // Buscar nome da conta
       fetch(`/api/account_name/${ACCOUNT_ID}`)
         .then(res => res.json())
         .then(data => {
@@ -88,6 +88,7 @@ const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]);
           document.getElementById("accountName").textContent = "Erro ao buscar nome";
         });
 
+      // Inboxes
       fetch(`/api/inboxes/${ACCOUNT_ID}`)
         .then(res => res.json())
         .then(data => {
@@ -100,6 +101,7 @@ const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]);
           });
         });
 
+      // Etiquetas
       fetch(`/api/labels/${ACCOUNT_ID}`)
         .then(res => res.json())
         .then(data => {
