@@ -11,6 +11,7 @@ app = Flask(__name__)
 # Configurações
 CHATWOOT_URL = "https://app.bee360.com.br/api"
 API_TOKEN = "e3nLN2WM3nsUbeM31BudDvit"
+ACCOUNT_ID = 58
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -39,21 +40,21 @@ def allowed_file(filename):
 def index():
     return render_template("index.html")
 
-@app.route("/api/account_name/<int:account_id>")
-def get_account_name(account_id):
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}", headers=headers)
+@app.route("/api/account_name")
+def get_account_name():
+    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}", headers=headers)
     if r.status_code == 200:
         return jsonify(r.json())
     return jsonify({"error": "Falha ao buscar nome da conta"}), 500
 
-@app.route("/api/inboxes/<int:account_id>")
-def get_inboxes(account_id):
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/inboxes", headers=headers)
+@app.route("/api/inboxes")
+def get_inboxes():
+    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/inboxes", headers=headers)
     return jsonify(r.json())
 
-@app.route("/api/labels/<int:account_id>")
-def get_labels(account_id):
-    r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/labels", headers=headers)
+@app.route("/api/labels")
+def get_labels():
+    r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/labels", headers=headers)
     return jsonify(r.json())
 
 @app.route("/api/upload_csv", methods=["POST"])
@@ -76,13 +77,12 @@ def upload_csv():
 @app.route("/api/upload_attachment", methods=["POST"])
 def upload_attachment():
     file = request.files.get("attachment")
-    account_id = request.form.get("account_id")
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(path)
         r = requests.post(
-            f"{CHATWOOT_URL}/accounts/{account_id}/attachments",
+            f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/attachments",
             headers=headers,
             files={"file": open(path, "rb")}
         )
@@ -94,7 +94,6 @@ def upload_attachment():
 @app.route("/api/start_campaign", methods=["POST"])
 def start_campaign():
     data = request.get_json()
-    account_id = data.get("account_id")
     inbox_id = data.get("inbox_id")
     message = data.get("message")
     label = data.get("label")
@@ -106,7 +105,7 @@ def start_campaign():
 
     if not contacts:
         if trigger == "etiquetas" and label:
-            r = requests.get(f"{CHATWOOT_URL}/accounts/{account_id}/contacts?labels={label}", headers=headers)
+            r = requests.get(f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/contacts?labels={label}", headers=headers)
             if r.status_code == 200:
                 contacts = r.json().get("data", [])
 
@@ -125,7 +124,7 @@ def start_campaign():
             payload["message"]["attachment_ids"] = [attachment_id]
 
         r = requests.post(
-            f"{CHATWOOT_URL}/accounts/{account_id}/conversations",
+            f"{CHATWOOT_URL}/accounts/{ACCOUNT_ID}/conversations",
             headers=headers,
             json=payload
         )
