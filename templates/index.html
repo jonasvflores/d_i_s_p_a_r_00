@@ -1,32 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🐝 Bee360 - Disparador</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-50 text-gray-800">
   <div class="max-w-4xl mx-auto py-8 px-4">
     <h1 class="text-3xl font-bold mb-6">🐝 Bee360 - Disparador</h1>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Nome da Conta:</label>
-      <div id="accountName" class="p-2 bg-gray-200 rounded">Carregando...</div>
+      <label class="block mb-1 font-semibold">Nome da Conta:</label>
+      <div id="accountName" class="bg-gray-200 p-2 rounded">Carregando...</div>
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Telefone (Inbox):</label>
+      <label class="block mb-1 font-semibold">Telefone (Inbox):</label>
       <select id="inboxCombo" class="w-full p-2 border rounded"></select>
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Nome da Campanha:</label>
+      <label class="block mb-1 font-semibold">Nome da Campanha:</label>
       <input id="campaignName" type="text" class="w-full p-2 border rounded" placeholder="Digite o nome da campanha">
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Tipo de Disparo:</label>
+      <label class="block mb-1 font-semibold">Tipo de Disparo:</label>
       <select id="triggerType" class="w-full p-2 border rounded">
         <option value="etiquetas">Disparo por Etiqueta</option>
         <option value="csv">Importar CSV</option>
@@ -34,102 +34,90 @@
     </div>
 
     <div id="etiquetasGroup" class="mb-4">
-      <label class="block mb-1 font-medium">Etiqueta:</label>
+      <label class="block mb-1 font-semibold">Etiqueta:</label>
       <select id="labelCombo" class="w-full p-2 border rounded"></select>
     </div>
 
     <div id="csvGroup" class="mb-4 hidden">
-      <label class="block mb-1 font-medium">CSV com colunas nome/telefone:</label>
+      <label class="block mb-1 font-semibold">CSV com colunas nome/telefone:</label>
       <input id="csvFile" type="file" class="w-full">
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Qtd. de contatos:</label>
+      <label class="block mb-1 font-semibold">Qtd. de contatos:</label>
       <input id="quantityInput" type="number" class="w-full p-2 border rounded" placeholder="Todos">
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Mensagem:</label>
+      <label class="block mb-1 font-semibold">Mensagem:</label>
       <textarea id="messageInput" class="w-full p-2 border rounded" rows="4" placeholder="Olá {nome}, tudo bem?"></textarea>
     </div>
 
     <div class="mb-4">
-      <label class="block mb-1 font-medium">Anexo (opcional):</label>
+      <label class="block mb-1 font-semibold">Anexo (opcional):</label>
       <input id="fileInput" type="file" class="w-full">
     </div>
 
     <div class="flex flex-wrap gap-2 mb-6">
-      <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded" onclick="previewCampaign()">Prévia da Campanha</button>
-      <button class="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded" onclick="startCampaign()">Iniciar Disparo</button>
-      <button class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded" onclick="repeatCampaign()">Repetir Última Campanha</button>
-      <button class="bg-red-400 hover:bg-red-500 text-white px-4 py-2 rounded" onclick="clearForm()">Limpar Tudo</button>
+      <button class="bg-blue-500 text-white px-4 py-2 rounded" onclick="previewCampaign()">Prévia da Campanha</button>
+      <button class="bg-yellow-400 text-black px-4 py-2 rounded" onclick="startCampaign()">Iniciar Disparo</button>
+      <button class="bg-pink-500 text-white px-4 py-2 rounded" onclick="repeatCampaign()">Repetir Última Campanha</button>
+      <button class="bg-red-400 text-white px-4 py-2 rounded" onclick="clearForm()">Limpar Tudo</button>
     </div>
 
-    <div class="mb-6">
-      <h2 class="text-xl font-semibold mb-2">Logs e Relatórios</h2>
-      <div id="logContainer" class="bg-white p-4 border rounded overflow-auto"></div>
+    <div>
+      <h2 class="text-xl font-bold mb-2">Logs e Relatórios</h2>
+      <div id="logContainer" class="bg-white border rounded p-4"></div>
     </div>
   </div>
 
   <script>
-    // Detectar account_id dinamicamente pela URL (ex: /accounts/58/apps/123)
-    const urlParts = window.location.href.split("/");
-    const ACCOUNT_ID = parseInt(urlParts[urlParts.indexOf("accounts") + 1]) || 0;
+    const ACCOUNT_ID = 58;
 
-    window.onload = function () {
-      // Buscar nome da conta
-      fetch(`/api/account_name/${ACCOUNT_ID}`)
+    window.onload = () => {
+      fetch(`/api/account_name`)
         .then(res => res.json())
         .then(data => {
-          const name = data.name || data.account?.name || "Conta desconhecida";
-          document.getElementById("accountName").textContent = name;
-        })
-        .catch(() => {
-          document.getElementById("accountName").textContent = "Erro ao buscar nome";
+          document.getElementById("accountName").textContent = data.name || `Conta ${ACCOUNT_ID}`;
         });
 
-      // Inboxes
-      fetch(`/api/inboxes/${ACCOUNT_ID}`)
+      fetch(`/api/inboxes`)
         .then(res => res.json())
         .then(data => {
-          const inboxCombo = document.getElementById("inboxCombo");
+          const select = document.getElementById("inboxCombo");
           data.forEach(inbox => {
-            const option = document.createElement("option");
-            option.value = inbox.id;
-            option.textContent = inbox.name;
-            inboxCombo.appendChild(option);
+            const opt = document.createElement("option");
+            opt.value = inbox.id;
+            opt.textContent = inbox.name;
+            select.appendChild(opt);
           });
         });
 
-      // Etiquetas
-      fetch(`/api/labels/${ACCOUNT_ID}`)
+      fetch(`/api/labels`)
         .then(res => res.json())
         .then(data => {
-          const labelCombo = document.getElementById("labelCombo");
+          const select = document.getElementById("labelCombo");
           data.forEach(label => {
-            const option = document.createElement("option");
-            option.value = label.title;
-            option.textContent = label.title;
-            labelCombo.appendChild(option);
+            const opt = document.createElement("option");
+            opt.value = label.title;
+            opt.textContent = label.title;
+            select.appendChild(opt);
           });
         });
-
-      document.getElementById("triggerType").addEventListener("change", e => {
-        const tipo = e.target.value;
-        document.getElementById("etiquetasGroup").classList.toggle("hidden", tipo !== "etiquetas");
-        document.getElementById("csvGroup").classList.toggle("hidden", tipo !== "csv");
-      });
 
       fetch("/api/campaigns/history/table")
         .then(res => res.text())
-        .then(html => {
-          document.getElementById("logContainer").innerHTML = html;
-        });
+        .then(html => document.getElementById("logContainer").innerHTML = html);
+
+      document.getElementById("triggerType").addEventListener("change", (e) => {
+        document.getElementById("etiquetasGroup").classList.toggle("hidden", e.target.value !== "etiquetas");
+        document.getElementById("csvGroup").classList.toggle("hidden", e.target.value !== "csv");
+      });
     };
 
     function previewCampaign() {
       const msg = document.getElementById("messageInput").value;
-      alert("Prévia da mensagem:\n" + msg);
+      alert("Prévia:\n" + msg);
     }
 
     function startCampaign() {
@@ -139,8 +127,8 @@
       const quantity = document.getElementById("quantityInput").value || "Todos";
       const triggerType = document.getElementById("triggerType").value;
       const label = document.getElementById("labelCombo").value;
-      const fileInput = document.getElementById("fileInput").files[0];
-      const csvInput = document.getElementById("csvFile").files[0];
+      const attachmentFile = document.getElementById("fileInput").files[0];
+      const csvFile = document.getElementById("csvFile").files[0];
 
       const payload = {
         account_id: ACCOUNT_ID,
@@ -152,48 +140,50 @@
         label
       };
 
-      if (triggerType === "csv" && csvInput) {
+      if (triggerType === "csv" && csvFile) {
         const formData = new FormData();
-        formData.append("csvFile", csvInput);
+        formData.append("csvFile", csvFile);
         fetch("/api/upload_csv", { method: "POST", body: formData })
           .then(res => res.json())
           .then(data => {
             payload.contacts = data.contacts;
-            uploadAndSend(payload, fileInput);
+            handleAttachmentAndSend(payload, attachmentFile);
           });
       } else {
-        uploadAndSend(payload, fileInput);
+        handleAttachmentAndSend(payload, attachmentFile);
       }
     }
 
-    function uploadAndSend(payload, file) {
+    function handleAttachmentAndSend(payload, file) {
       if (file) {
         const formData = new FormData();
         formData.append("attachment", file);
-        formData.append("account_id", payload.account_id);
-        fetch("/api/upload_attachment", { method: "POST", body: formData })
+        fetch("/api/upload_attachment", {
+          method: "POST",
+          body: formData
+        })
           .then(res => res.json())
           .then(data => {
             payload.attachment_id = data.attachment_id;
-            sendNow(payload);
+            sendPayload(payload);
           });
       } else {
-        sendNow(payload);
+        sendPayload(payload);
       }
     }
 
-    function sendNow(payload) {
+    function sendPayload(payload) {
       fetch("/api/start_campaign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       })
-      .then(res => res.json())
-      .then(data => alert(data.message));
+        .then(res => res.json())
+        .then(data => alert(data.message));
     }
 
     function repeatCampaign() {
-      alert("Repetir última campanha ainda não implementado");
+      alert("Função de repetir campanha ainda não implementada.");
     }
 
     function clearForm() {
