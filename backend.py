@@ -162,4 +162,31 @@ def history_table():
     c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 20")
     rows = c.fetchall()
     html = """
-    <
+    <table border='1' cellpadding='6' cellspacing='0'>
+        <thead>
+            <tr><th>ID</th><th>Data</th><th>Campanha</th><th>Mensagem</th><th>Enviadas</th><th>Total</th><th>Tipo</th></tr>
+        </thead><tbody>
+    """
+    for r in rows:
+        html += f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td>{r[5]}</td><td>{r[6]}</td></tr>"
+    html += "</tbody></table>"
+    return html
+
+@app.route("/api/campaigns/last")
+def last_campaign():
+    c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 1")
+    row = c.fetchone()
+    if row:
+        return jsonify({
+            "campaign": row[2],
+            "message": row[3],
+            "quantity": str(row[5]),
+            "tipo_disparo": row[6],
+            "order": row[7],
+            "saudacao": row[8],
+            "sair": row[9]
+        })
+    return jsonify({"error": "Nenhuma campanha encontrada"}), 404
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
