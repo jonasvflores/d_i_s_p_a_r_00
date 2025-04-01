@@ -1,12 +1,11 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import requests
 import pandas as pd
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import sqlite3
 import logging
-import time
 
 app = Flask(__name__)
 
@@ -17,7 +16,8 @@ logger = logging.getLogger(__name__)
 # Configurações
 ACCOUNT_ID = 58  # Ajuste aqui para a conta desejada (ex.: 58 para Atacadão Viana)
 WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
-WEBHOOK_RESULT_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360/result"  # Ajuste para o endpoint correto
+CHATWOOT_API_URL = "https://app.chatwoot.com/api/v1"  # URL da API do Chatwoot
+CHATWOOT_API_TOKEN = os.getenv("CHATWOOT_API_TOKEN", "SEU_TOKEN_AQUI")  # Adicione o token no Render.com
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -44,28 +44,62 @@ conn.commit()
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def poll_webhook_result(execution_id, max_attempts=10, delay=2):
-    """Faz polling para obter o resultado do workflow do n8n."""
-    for attempt in range(max_attempts):
-        try:
-            r = requests.get(f"{WEBHOOK_RESULT_URL}/{execution_id}")
-            r.raise_for_status()
-            response_data = r.json()
-            logger.debug(f"Resultado do polling (tentativa {attempt + 1}): {response_data}")
-            
-            # Verifica se o workflow terminou e tem os dados esperados
-            if response_data.get("status") == "completed" and "data" in response_data:
-                return response_data["data"]
-            elif response_data.get("status") == "failed":
-                logger.error("Workflow falhou no n8n.")
-                return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Erro ao fazer polling: {str(e)}")
-        
-        time.sleep(delay)  # Espera antes da próxima tentativa
-    
-    logger.error("Timeout ao esperar o resultado do workflow.")
-    return None
+# Função para buscar dados diretamente do Chatwoot
+def get_chatwoot_account_name(account_id):
+    try:
+        headers = {
+            "api_access_token": CHATWOOT_API_TOKEN,
+            "Content-Type": "application/json"
+        }
+        r = requests.get(f"{CHATWOOT_API_URL}/accounts/{account_id}", headers=headers)
+        r.raise_for_status()
+        data = r.json()
+        return data.get("name", "Conta não identificada")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar nome da conta no Chatwoot: {str(e)}")
+        return "Conta não identificada"
+
+def get_chatwoot_inboxes(account_id):
+    try:
+        headers = {
+            "api_access_token": CHATWOOT_API_TOKEN,
+            "Content-Type": "application/json"
+        }
+        r = requests.get(f"{CHATWOOT_API_URL}/accounts/{account_id}/inboxes", headers=headers)
+        r.raise_for_status()
+        inboxes = r.json()
+        return [{"id": inbox["id"], "name": inbox["name"]} for inbox in inboxes]
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar inboxes no Chatwoot: {str(e)}")
+        return []
+
+def get_chatwoot_labels(account_id):
+    try:
+        headers = {
+            "api_access_token": CHATWOOT_API_TOKEN,
+            "Content-Type": "application/json"
+        }
+        r = requests.get(f"{CHATWOOT_API_URL}/accounts/{account_id}/labels", headers=headers)
+        r.raise_for_status()
+        labels = r.json()
+        return [{"title": label["title"]} for label in labels]
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar etiquetas no Chatwoot: {str(e)}")
+        return []
+
+def get_chatwoot_custom_attributes(account_id):
+    try:
+        headers = {
+            "api_access_token": CHATWOOT_API_TOKEN,
+            "Content-Type": "application/json"
+        }
+        r = requests.get(f"{CHATWOOT_API_URL}/accounts/{account_id}/custom_attribute_definitions", headers=headers)
+        r.raise_for_status()
+        attrs = r.json()
+        return [{"key": attr["attribute_key"], "name": attr["attribute_display_name"]} for attr in attrs]
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar campos personalizados no Chatwoot: {str(e)}")
+        return []
 
 @app.route("/")
 def index():
@@ -73,26 +107,20 @@ def index():
 
 @app.route("/api/inboxes")
 def get_inboxes():
-    payload = {"query": {"account_id": ACCOUNT_ID}}
+    # Tentar buscar diretamente do Chatwoot
+    inboxes = get_chatwoot_inboxes(ACCOUNT_ID)
+    if inboxes:
+        return jsonify(inboxes)
+    
+    # Fallback para o webhook (caso o Chatwoot não funcione)
+    payload = {"query": {"account_id": ACCOUNT_ID, "sync": "true"}}  # Tentar forçar resposta síncrona
     try:
-        # Inicia o workflow
         r = requests.post(WEBHOOK_URL, json=payload)
         r.raise_for_status()
         response_data = r.json()
-        logger.debug(f"Resposta inicial do webhook para inboxes: {response_data}")
+        logger.debug(f"Resposta do webhook para inboxes: {response_data}")
         
-        # Verifica se o workflow foi iniciado e obtém o executionId
-        if response_data.get("message") != "Workflow was started" or "executionId" not in response_data:
-            logger.error("Resposta do webhook não contém executionId.")
-            return jsonify({"error": "Falha ao iniciar o workflow"}), 500
-        
-        execution_id = response_data["executionId"]
-        result_data = poll_webhook_result(execution_id)
-        
-        if not result_data:
-            return jsonify({"error": "Falha ao obter inboxes"}), 500
-        
-        inboxes = result_data.get("inboxes", [])
+        inboxes = response_data.get("data", {}).get("inboxes", [])
         if not inboxes:
             logger.warning("Nenhuma inbox encontrada na resposta do webhook.")
             return jsonify({"error": "Nenhuma inbox encontrada"}), 500
@@ -103,24 +131,20 @@ def get_inboxes():
 
 @app.route("/api/labels")
 def get_labels():
-    payload = {"query": {"account_id": ACCOUNT_ID}}
+    # Tentar buscar diretamente do Chatwoot
+    labels = get_chatwoot_labels(ACCOUNT_ID)
+    if labels:
+        return jsonify(labels)
+    
+    # Fallback para o webhook
+    payload = {"query": {"account_id": ACCOUNT_ID, "sync": "true"}}
     try:
         r = requests.post(WEBHOOK_URL, json=payload)
         r.raise_for_status()
         response_data = r.json()
-        logger.debug(f"Resposta inicial do webhook para labels: {response_data}")
+        logger.debug(f"Resposta do webhook para labels: {response_data}")
         
-        if response_data.get("message") != "Workflow was started" or "executionId" not in response_data:
-            logger.error("Resposta do webhook não contém executionId.")
-            return jsonify({"error": "Falha ao iniciar o workflow"}), 500
-        
-        execution_id = response_data["executionId"]
-        result_data = poll_webhook_result(execution_id)
-        
-        if not result_data:
-            return jsonify({"error": "Falha ao obter etiquetas"}), 500
-        
-        labels = result_data.get("labels", [])
+        labels = response_data.get("data", {}).get("labels", [])
         if not labels:
             logger.warning("Nenhuma etiqueta encontrada na resposta do webhook.")
             return jsonify({"error": "Nenhuma etiqueta encontrada"}), 500
@@ -131,24 +155,20 @@ def get_labels():
 
 @app.route("/api/custom_attributes")
 def get_custom_attributes():
-    payload = {"query": {"account_id": ACCOUNT_ID}}
+    # Tentar buscar diretamente do Chatwoot
+    attrs = get_chatwoot_custom_attributes(ACCOUNT_ID)
+    if attrs:
+        return jsonify(attrs)
+    
+    # Fallback para o webhook
+    payload = {"query": {"account_id": ACCOUNT_ID, "sync": "true"}}
     try:
         r = requests.post(WEBHOOK_URL, json=payload)
         r.raise_for_status()
         response_data = r.json()
-        logger.debug(f"Resposta inicial do webhook para custom_attributes: {response_data}")
+        logger.debug(f"Resposta do webhook para custom_attributes: {response_data}")
         
-        if response_data.get("message") != "Workflow was started" or "executionId" not in response_data:
-            logger.error("Resposta do webhook não contém executionId.")
-            return jsonify({"error": "Falha ao iniciar o workflow"}), 500
-        
-        execution_id = response_data["executionId"]
-        result_data = poll_webhook_result(execution_id)
-        
-        if not result_data:
-            return jsonify({"error": "Falha ao obter campos personalizados"}), 500
-        
-        attrs = [{"key": attr["key"], "name": attr["name"]} for attr in result_data.get("custom_attribute_definitions", [])]
+        attrs = [{"key": attr["key"], "name": attr["name"]} for attr in response_data.get("data", {}).get("custom_attribute_definitions", [])]
         if not attrs:
             logger.warning("Nenhum campo personalizado encontrado na resposta do webhook.")
             return jsonify({"error": "Nenhum campo personalizado encontrado"}), 500
@@ -159,24 +179,20 @@ def get_custom_attributes():
 
 @app.route("/api/account_name")
 def get_account_name():
-    payload = {"query": {"account_id": ACCOUNT_ID}}
+    # Tentar buscar diretamente do Chatwoot
+    account_name = get_chatwoot_account_name(ACCOUNT_ID)
+    if account_name != "Conta não identificada":
+        return jsonify({"account_name": account_name})
+    
+    # Fallback para o webhook
+    payload = {"query": {"account_id": ACCOUNT_ID, "sync": "true"}}
     try:
         r = requests.post(WEBHOOK_URL, json=payload)
         r.raise_for_status()
         response_data = r.json()
-        logger.debug(f"Resposta inicial do webhook para account_name: {response_data}")
+        logger.debug(f"Resposta do webhook para account_name: {response_data}")
         
-        if response_data.get("message") != "Workflow was started" or "executionId" not in response_data:
-            logger.error("Resposta do webhook não contém executionId.")
-            return jsonify({"error": "Falha ao iniciar o workflow"}), 500
-        
-        execution_id = response_data["executionId"]
-        result_data = poll_webhook_result(execution_id)
-        
-        if not result_data:
-            return jsonify({"error": "Falha ao obter nome da conta"}), 500
-        
-        account_name = result_data.get("account_name", "Conta não identificada")
+        account_name = response_data.get("data", {}).get("account_name", "Conta não identificada")
         if account_name == "Conta não identificada":
             logger.warning("Nome da conta não encontrado na resposta do webhook.")
         return jsonify({"account_name": account_name})
@@ -208,7 +224,7 @@ def upload_attachment():
         filename = secure_filename(file.filename)
         path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(path)
-        base_url = request Oldals.request.host_url.rstrip('/')
+        base_url = request.host_url.rstrip('/')
         file_url = f"{base_url}/uploads/{filename}"
         return jsonify({"file_url": file_url})
     return jsonify({"error": "Arquivo inválido"}), 400
