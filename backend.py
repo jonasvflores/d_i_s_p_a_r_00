@@ -9,7 +9,7 @@ import sqlite3
 app = Flask(__name__)
 
 # Configurações
-ACCOUNT_ID = 37  # Ajuste conforme necessário
+ACCOUNT_ID = 58  # Ajuste conforme necessário
 WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -26,7 +26,11 @@ c.execute('''CREATE TABLE IF NOT EXISTS logs (
     campaign TEXT,
     message TEXT,
     sent INTEGER,
-    total INTEGER
+    total INTEGER,
+    tipo_disparo TEXT,
+    order TEXT,
+    saudacao TEXT,
+    sair TEXT
 )''')
 conn.commit()
 
@@ -43,7 +47,7 @@ def get_inboxes():
     r = requests.post(WEBHOOK_URL, json=payload)
     if r.status_code == 200:
         # Simulando resposta baseada no n8n (ajuste conforme o retorno real)
-        inboxes = [{"id": i["id"], "name": i["name"]} for i in requests.get(f"https://app.bee360.com.br/api/v1/accounts/{ACCOUNT_ID}/inboxes", headers={"api_access_token": "SEU_TOKEN"}).json()]
+        inboxes = [{"id": i["id"], "name": i["name"]} for i in r.json().get("data", {}).get("inboxes", [])]
         return jsonify(inboxes)
     return jsonify({"error": "Falha ao buscar inboxes"}), 500
 
@@ -52,14 +56,28 @@ def get_labels():
     payload = {"query": {"account_id": ACCOUNT_ID}}
     r = requests.post(WEBHOOK_URL, json=payload)
     if r.status_code == 200:
-        # Simulando resposta (ajuste com base no n8n ou API direta)
-        labels = requests.get(f"https://app.bee360.com.br/api/v1/accounts/{ACCOUNT_ID}/labels", headers={"api_access_token": "SEU_TOKEN"}).json()
+        # Simulando resposta (ajuste com base no n8n)
+        labels = r.json().get("data", {}).get("labels", [])
         return jsonify(labels)
     return jsonify({"error": "Falha ao buscar etiquetas"}), 500
 
+@app.route("/api/custom_attributes")
+def get_custom_attributes():
+    payload = {"query": {"account_id": ACCOUNT_ID}}
+    r = requests.post(WEBHOOK_URL, json=payload)
+    if r.status_code == 200:
+        # Ajuste conforme a estrutura real da resposta do n8n
+        attrs = [{"key": attr["key"], "name": attr["name"]} for attr in r.json().get("data", {}).get("custom_attribute_definitions", [])]
+        return jsonify(attrs)
+    return jsonify({"error": "Falha ao buscar campos personalizados"}), 500
+
 @app.route("/api/account_name")
 def get_account_name():
-    return jsonify({"account_name": "Atacadão Viana"})  # Ajuste para buscar dinamicamente se necessário
+    payload = {"query": {"account_id": ACCOUNT_ID}}
+    r = requests.post(WEBHOOK_URL, json=payload)
+    if r.status_code == 200:
+        return jsonify({"account_name": r.json().get("data", {}).get("account_name", "Atacadão Viana")})
+    return jsonify({"account_name": "Atacadão Viana"})  # Fallback
 
 @app.route("/api/upload_csv", methods=["POST"])
 def upload_csv():
@@ -110,7 +128,7 @@ def start_campaign():
             "saudacao": data["saudacao"],
             "sair": data["sair"]
         },
-        "body": data  # Inclui todos os dados no body também, como no Typebot
+        "body": data
     }
     
     if "contacts" in data:
@@ -118,8 +136,9 @@ def start_campaign():
 
     r = requests.post(WEBHOOK_URL, json=payload)
     if r.status_code == 200:
-        c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total) VALUES (?, ?, ?, ?, ?)",
-                  (datetime.now().isoformat(), data["campaign"], data["message"], 0, int(data["quantity"]) if data["quantity"] != "Todos" else 200))
+        c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total, tipo_disparo, order, saudacao, sair) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  (datetime.now().isoformat(), data["campaign"], data["message"], 0, int(data["quantity"]) if data["quantity"] != "Todos" else 200,
+                   data["tipo_disparo"], data["order"], data["saudacao"], data["sair"]))
         conn.commit()
         return jsonify({"message": "Campanha iniciada! Aguarde o processamento no n8n."})
     return jsonify({"error": "Falha ao iniciar campanha"}), 500
@@ -134,7 +153,11 @@ def history():
         "campaign": r[2],
         "message": r[3],
         "sent": r[4],
-        "total": r[5]
+        "total": r[5],
+        "tipo_disparo": r[6],
+        "order": r[7],
+        "saudacao": r[8],
+        "sair": r[9]
     } for r in rows])
 
 @app.route("/api/campaigns/history/table")
@@ -144,11 +167,11 @@ def history_table():
     html = """
     <table border='1' cellpadding='6' cellspacing='0'>
         <thead>
-            <tr><th>ID</th><th>Data</th><th>Campanha</th><th>Mensagem</th><th>Enviadas</th><th>Total</th></tr>
+            <tr><th>ID</th><th>Data</th><th>Campanha</th><th>Mensagem</th><th>Enviadas</th><th>Total</th><th>Tipo</th></tr>
         </thead><tbody>
     """
     for r in rows:
-        html += f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td>{r[5]}</td></tr>"
+        html += f"<tr><td>{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td><td>{r[4]}</td><td>{r[5]}</td><td>{r[6]}</td></tr>"
     html += "</tbody></table>"
     return html
 
@@ -161,7 +184,10 @@ def last_campaign():
             "campaign": row[2],
             "message": row[3],
             "quantity": str(row[5]),
-            "tipo_disparo": "Disparo condicional por etiquetas"  # Ajuste conforme necessário
+            "tipo_disparo": row[6],
+            "order": row[7],
+            "saudacao": row[8],
+            "sair": row[9]
         })
     return jsonify({"error": "Nenhuma campanha encontrada"}), 404
 
