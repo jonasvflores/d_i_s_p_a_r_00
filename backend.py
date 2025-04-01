@@ -9,7 +9,7 @@ import sqlite3
 app = Flask(__name__)
 
 # Configurações
-ACCOUNT_ID = 37  # Ajuste aqui para a conta desejada (ex.: 37)
+ACCOUNT_ID = 37  # Ajuste aqui para a conta desejada
 WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -28,7 +28,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS logs (
     sent INTEGER,
     total INTEGER,
     tipo_disparo TEXT,
-    order TEXT,
+    "order" TEXT,
     saudacao TEXT,
     sair TEXT
 )''')
@@ -133,7 +133,7 @@ def start_campaign():
 
     r = requests.post(WEBHOOK_URL, json=payload)
     if r.status_code == 200:
-        c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total, tipo_disparo, order, saudacao, sair) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        c.execute('INSERT INTO logs (timestamp, campaign, message, sent, total, tipo_disparo, "order", saudacao, sair) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                   (datetime.now().isoformat(), data["campaign"], data["message"], 0, int(data["quantity"]) if data["quantity"] != "Todos" else 200,
                    data["tipo_disparo"], data["order"], data["saudacao"], data["sair"]))
         conn.commit()
@@ -142,7 +142,7 @@ def start_campaign():
 
 @app.route("/api/campaigns/history")
 def history():
-    c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 20")
+    c.execute('SELECT * FROM logs ORDER BY id DESC LIMIT 20')
     rows = c.fetchall()
     return jsonify([{
         "id": r[0],
@@ -159,7 +159,7 @@ def history():
 
 @app.route("/api/campaigns/history/table")
 def history_table():
-    c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 20")
+    c.execute('SELECT * FROM logs ORDER BY id DESC LIMIT 20')
     rows = c.fetchall()
     html = """
     <table border='1' cellpadding='6' cellspacing='0'>
@@ -174,7 +174,7 @@ def history_table():
 
 @app.route("/api/campaigns/last")
 def last_campaign():
-    c.execute("SELECT * FROM logs ORDER BY id DESC LIMIT 1")
+    c.execute('SELECT * FROM logs ORDER BY id DESC LIMIT 1')
     row = c.fetchone()
     if row:
         return jsonify({
