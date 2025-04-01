@@ -9,7 +9,7 @@ import sqlite3
 app = Flask(__name__)
 
 # Configurações
-ACCOUNT_ID = 58  # Ajuste conforme necessário
+ACCOUNT_ID = 37  # Ajuste conforme necessário
 WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
