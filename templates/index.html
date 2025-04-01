@@ -52,29 +52,57 @@
 
         <div id="customFieldsGroup" class="mb-4 hidden">
             <label class="block mb-1 font-medium">Campo Personalizado:</label>
-            <input id="customField" type="text" class="w-full p-2 border rounded" placeholder="Ex.: campanhas">
+            <select id="customField" class="w-full p-2 border rounded">
+                <option value="">Selecione um campo</option>
+            </select>
             <label class="block mb-1 font-medium mt-2">Valor do Campo:</label>
             <input id="customFieldValue" type="text" class="w-full p-2 border rounded" placeholder="Ex.: 2025_03_REATIVACAO">
         </div>
 
         <div id="dateLimitGroup" class="mb-4 hidden">
             <label class="block mb-1 font-medium">Dias sem interação:</label>
-            <input id="dateLimit" type="number" class="w-full p-2 border rounded" placeholder="Ex.: 14">
+            <input id="dateLimit" type="number" class="w-full p-2 border rounded" placeholder="Ex.: 14" min="1">
         </div>
 
         <div class="mb-4">
             <label class="block mb-1 font-medium">Quantidade de Contatos:</label>
-            <input id="quantityInput" type="number" class="w-full p-2 border rounded" placeholder="Todos">
+            <input id="quantityInput" type="number" class="w-full p-2 border rounded" placeholder="Todos" max="200">
+            <p class="text-sm text-gray-500 mt-1">Máximo de 200 disparos por dia para evitar bloqueios.</p>
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Ordem do Disparo:</label>
+            <select id="order" class="w-full p-2 border rounded">
+                <option value="Antigos primeiro">Antigos primeiro</option>
+                <option value="Recentes primeiro">Recentes primeiro</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Saudação Aleatória:</label>
+            <select id="saudacao" class="w-full p-2 border rounded">
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Adicionar #SAIR:</label>
+            <select id="sair" class="w-full p-2 border rounded">
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+            </select>
         </div>
 
         <div class="mb-4">
             <label class="block mb-1 font-medium">Mensagem:</label>
             <textarea id="messageInput" class="w-full p-2 border rounded" rows="4" placeholder="Olá {nome}, tudo bem?"></textarea>
+            <p class="text-sm text-gray-500 mt-1">Use {nome} para incluir o nome do contato. Não adicione #sair manualmente.</p>
         </div>
 
         <div class="mb-4">
             <label class="block mb-1 font-medium">Anexo (opcional):</label>
-            <input id="fileInput" type="file" class="w-full">
+            <input id="fileInput" type="file" class="w-full" accept=".png,.jpg,.jpeg,.mp4,.mp3,.pdf">
         </div>
 
         <div class="flex flex-wrap gap-2 mb-6">
@@ -91,7 +119,7 @@
     </div>
 
     <script>
-        const ACCOUNT_ID = 37; // Ajuste conforme necessário
+        const ACCOUNT_ID = 58; // Ajuste conforme necessário
 
         window.onload = function () {
             // Carregar inboxes
@@ -117,6 +145,19 @@
                         option.value = label.title;
                         option.textContent = label.title;
                         labelCombo.appendChild(option);
+                    });
+                });
+
+            // Carregar campos personalizados
+            fetch(`/api/custom_attributes`)
+                .then(res => res.json())
+                .then(data => {
+                    const customFieldCombo = document.getElementById("customField");
+                    data.forEach(attr => {
+                        const option = document.createElement("option");
+                        option.value = attr.key;
+                        option.textContent = attr.name;
+                        customFieldCombo.appendChild(option);
                     });
                 });
 
@@ -161,6 +202,9 @@
             const customField = document.getElementById("customField").value;
             const customFieldValue = document.getElementById("customFieldValue").value;
             const dateLimit = document.getElementById("dateLimit").value;
+            const order = document.getElementById("order").value;
+            const saudacao = document.getElementById("saudacao").value;
+            const sair = document.getElementById("sair").value;
 
             const payload = {
                 account_id: ACCOUNT_ID,
@@ -173,9 +217,9 @@
                 custom_attribute_filter: triggerType === "Disparo condicional por campos personalizados" ? customField : "",
                 text_custom_attribute_filter: triggerType === "Disparo condicional por campos personalizados" ? customFieldValue : "",
                 date_limit: triggerType === "Mais tempo sem interação" ? dateLimit : "",
-                order: "Antigos primeiro", // Padrão, pode ser ajustado
-                saudacao: "Não", // Padrão, pode ser adicionado ao form se necessário
-                sair: "Sim" // Padrão, adiciona opção de sair
+                order,
+                saudacao,
+                sair
             };
 
             if (triggerType === "csv" && csvInput) {
@@ -232,6 +276,9 @@
                     document.getElementById("messageInput").value = data.message;
                     document.getElementById("quantityInput").value = data.quantity;
                     document.getElementById("triggerType").value = data.tipo_disparo;
+                    document.getElementById("order").value = data.order;
+                    document.getElementById("saudacao").value = data.saudacao;
+                    document.getElementById("sair").value = data.sair;
                     alert("Última campanha carregada. Ajuste se necessário e clique em 'Iniciar Disparo'.");
                 });
         }
@@ -245,6 +292,9 @@
             document.getElementById("customField").value = "";
             document.getElementById("customFieldValue").value = "";
             document.getElementById("dateLimit").value = "";
+            document.getElementById("order").value = "Antigos primeiro";
+            document.getElementById("saudacao").value = "Sim";
+            document.getElementById("sair").value = "Sim";
         }
     </script>
 </body>
