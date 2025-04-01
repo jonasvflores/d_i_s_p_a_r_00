@@ -5,11 +5,16 @@ import pandas as pd
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import sqlite3
+import logging
 
 app = Flask(__name__)
 
+# Configurações de logging para depuração
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 # Configurações
-ACCOUNT_ID = 37  # Ajuste aqui para a conta desejada
+ACCOUNT_ID = 58  # Ajuste aqui para a conta desejada (ex.: 58 para Atacadão Viana)
 WEBHOOK_URL = "https://fluxo.archanjo.co/webhook/disparador-universal-bee360"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -44,38 +49,74 @@ def index():
 @app.route("/api/inboxes")
 def get_inboxes():
     payload = {"query": {"account_id": ACCOUNT_ID}}
-    r = requests.post(WEBHOOK_URL, json=payload)
-    if r.status_code == 200:
-        inboxes = [{"id": i["id"], "name": i["name"]} for i in r.json().get("data", {}).get("inboxes", [])]
+    try:
+        r = requests.post(WEBHOOK_URL, json=payload)
+        r.raise_for_status()  # Levanta um erro se a requisição falhar
+        response_data = r.json()
+        logger.debug(f"Resposta do webhook para inboxes: {response_data}")
+        
+        # Ajuste com base na estrutura real da resposta
+        inboxes = response_data.get("data", {}).get("inboxes", [])
+        if not inboxes:
+            logger.warning("Nenhuma inbox encontrada na resposta do webhook.")
+            return jsonify({"error": "Nenhuma inbox encontrada"}), 500
         return jsonify(inboxes)
-    return jsonify({"error": "Falha ao buscar inboxes"}), 500
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar inboxes: {str(e)}")
+        return jsonify({"error": "Falha ao buscar inboxes"}), 500
 
 @app.route("/api/labels")
 def get_labels():
     payload = {"query": {"account_id": ACCOUNT_ID}}
-    r = requests.post(WEBHOOK_URL, json=payload)
-    if r.status_code == 200:
-        labels = r.json().get("data", {}).get("labels", [])
+    try:
+        r = requests.post(WEBHOOK_URL, json=payload)
+        r.raise_for_status()
+        response_data = r.json()
+        logger.debug(f"Resposta do webhook para labels: {response_data}")
+        
+        labels = response_data.get("data", {}).get("labels", [])
+        if not labels:
+            logger.warning("Nenhuma etiqueta encontrada na resposta do webhook.")
+            return jsonify({"error": "Nenhuma etiqueta encontrada"}), 500
         return jsonify(labels)
-    return jsonify({"error": "Falha ao buscar etiquetas"}), 500
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar etiquetas: {str(e)}")
+        return jsonify({"error": "Falha ao buscar etiquetas"}), 500
 
 @app.route("/api/custom_attributes")
 def get_custom_attributes():
     payload = {"query": {"account_id": ACCOUNT_ID}}
-    r = requests.post(WEBHOOK_URL, json=payload)
-    if r.status_code == 200:
-        attrs = [{"key": attr["key"], "name": attr["name"]} for attr in r.json().get("data", {}).get("custom_attribute_definitions", [])]
+    try:
+        r = requests.post(WEBHOOK_URL, json=payload)
+        r.raise_for_status()
+        response_data = r.json()
+        logger.debug(f"Resposta do webhook para custom_attributes: {response_data}")
+        
+        attrs = [{"key": attr["key"], "name": attr["name"]} for attr in response_data.get("data", {}).get("custom_attribute_definitions", [])]
+        if not attrs:
+            logger.warning("Nenhum campo personalizado encontrado na resposta do webhook.")
+            return jsonify({"error": "Nenhum campo personalizado encontrado"}), 500
         return jsonify(attrs)
-    return jsonify({"error": "Falha ao buscar campos personalizados"}), 500
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar campos personalizados: {str(e)}")
+        return jsonify({"error": "Falha ao buscar campos personalizados"}), 500
 
 @app.route("/api/account_name")
 def get_account_name():
     payload = {"query": {"account_id": ACCOUNT_ID}}
-    r = requests.post(WEBHOOK_URL, json=payload)
-    if r.status_code == 200:
-        account_name = r.json().get("data", {}).get("account_name", "Conta não identificada")
+    try:
+        r = requests.post(WEBHOOK_URL, json=payload)
+        r.raise_for_status()
+        response_data = r.json()
+        logger.debug(f"Resposta do webhook para account_name: {response_data}")
+        
+        account_name = response_data.get("data", {}).get("account_name", "Conta não identificada")
+        if account_name == "Conta não identificada":
+            logger.warning("Nome da conta não encontrado na resposta do webhook.")
         return jsonify({"account_name": account_name})
-    return jsonify({"error": "Falha ao buscar nome da conta"}), 500
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao buscar nome da conta: {str(e)}")
+        return jsonify({"error": "Falha ao buscar nome da conta"}), 500
 
 @app.route("/api/upload_csv", methods=["POST"])
 def upload_csv():
@@ -101,9 +142,15 @@ def upload_attachment():
         filename = secure_filename(file.filename)
         path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         file.save(path)
-        file_url = f"http://localhost:5000/uploads/{filename}"  # Ajuste para um URL real em produção
+        # Ajuste para o Render.com
+        base_url = request.host_url.rstrip('/')
+        file_url = f"{base_url}/uploads/{filename}"
         return jsonify({"file_url": file_url})
     return jsonify({"error": "Arquivo inválido"}), 400
+
+@app.route("/uploads/<filename>")
+def serve_uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 @app.route("/api/start_campaign", methods=["POST"])
 def start_campaign():
@@ -131,14 +178,17 @@ def start_campaign():
     if "contacts" in data:
         payload["body"]["contacts"] = data["contacts"]
 
-    r = requests.post(WEBHOOK_URL, json=payload)
-    if r.status_code == 200:
+    try:
+        r = requests.post(WEBHOOK_URL, json=payload)
+        r.raise_for_status()
         c.execute('INSERT INTO logs (timestamp, campaign, message, sent, total, tipo_disparo, "order", saudacao, sair) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                   (datetime.now().isoformat(), data["campaign"], data["message"], 0, int(data["quantity"]) if data["quantity"] != "Todos" else 200,
                    data["tipo_disparo"], data["order"], data["saudacao"], data["sair"]))
         conn.commit()
         return jsonify({"message": "Campanha iniciada! Aguarde o processamento no n8n."})
-    return jsonify({"error": "Falha ao iniciar campanha"}), 500
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao iniciar campanha: {str(e)}")
+        return jsonify({"error": "Falha ao iniciar campanha"}), 500
 
 @app.route("/api/campaigns/history")
 def history():
