@@ -37,13 +37,15 @@ def allowed_file(filename):
 def index():
     return render_template("index.html")
 
-@app.route("/api/account_data")
+@app.route("/api/account_data", methods=["GET"])
 def get_account_data():
-    r = requests.post(WEBHOOK_URL, json={"account_id": ACCOUNT_ID})
-    print("Resposta:", r.text)  # log
-    return jsonify({"message": "Webhook iniciado com sucesso"})
-
-
+    try:
+        r = requests.post(WEBHOOK_URL, json={"account_id": ACCOUNT_ID})
+        if r.status_code == 200:
+            return jsonify(r.json().get("data"))
+        return jsonify({"error": "Erro ao buscar dados"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/upload_csv", methods=["POST"])
 def upload_csv():
@@ -83,9 +85,7 @@ def start_campaign():
                 "content": message.replace("{nome}", contato.get("name") or contato.get("nome", ""))
             }
         }
-
-        # Aqui você deve enviar ao Chatwoot se tiver API, ou logar apenas:
-        enviados += 1  # Simula envio bem-sucedido
+        enviados += 1
 
     c.execute("INSERT INTO logs (timestamp, campaign, message, sent, total) VALUES (?, ?, ?, ?, ?)",
               (datetime.now().isoformat(), campaign_name, message, enviados, total))
